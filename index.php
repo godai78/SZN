@@ -4,7 +4,7 @@
 
 // ===== KONFIGURACJA =====
 const PASSWORD  = 'haslo';          // hasło do panelu redaktora
-const SITE_NAME = 'nazwa pisma - nabór';
+const SITE_NAME = 'nazwa pisma';
 const BASE_URL  = '';                    // opcjonalnie np. 'https://zgloszenia.twojadomena.pl/index.php'; puste = automatycznie
 const STATUSES  = ['otrzymane', 'w czytaniu', 'czeka na decyzję', 'przyjęte', 'odrzucone', 'wycofane'];
 const DATA_FILE = __DIR__ . '/data.php'; // dane (plik jest zabezpieczony przed odczytem z WWW)
@@ -61,6 +61,14 @@ function counts($data) {
     return $c;
 }
 
+// czas oczekiwania: dni od dodania do dziś; dla wpisów zamkniętych (przyjęte/odrzucone/wycofane) pusty tekst
+function waiting($e) {
+    if (in_array($e['status'], ['przyjęte', 'odrzucone', 'wycofane'], true)) return '';
+    $d = date_diff(date_create(substr($e['created'], 0, 10)), date_create('today'));
+    $n = $d->invert ? 0 : (int)$d->days;
+    return $n . ' ' . ($n === 1 ? 'dzień' : 'dni');
+}
+
 // ---------- widok publiczny (autor) ----------
 if (isset($_GET['t'])) {
     header('X-Robots-Tag: noindex, nofollow');
@@ -77,12 +85,14 @@ if (isset($_GET['t'])) {
         exit;
     }
     $c = counts($all);
+    $w = waiting($found);
     page($found['title'],
         '<p class="muted">' . h(SITE_NAME) . '</p>'
         . '<h1>' . h($found['title']) . '</h1>'
         . '<p>Autor: ' . h($found['author']) . '</p>'
         . '<div class="box"><div class="muted">Stan zgłoszenia</div><div class="big">' . h($found['status']) . '</div></div>'
         . '<p class="muted">Ostatnia zmiana: ' . h($found['updated']) . '</p>'
+        . ($w !== '' ? '<p class="muted">Oczekuje: <b>' . h($w) . '</b></p>' : '')
         . '<p class="muted">Zgłoszenia oczekujące na czytanie: <b>' . $c['queue'] . '</b></p>'
 		. '<p class="box">Legenda:<br>'
 		. '"otrzymane" to znaczy, że wszystko porządku i czeka na czytanie.<br>'
@@ -207,11 +217,11 @@ ob_start(); ?>
 
 <table>
   <tr><th>Autor / tytuł</th><th>Stan</th></tr>
-  <?php foreach ($rows as $e): $link = $base . '?t=' . $e['token']; ?>
+  <?php foreach ($rows as $e): $link = $base . '?t=' . $e['token']; $w = waiting($e); ?>
   <tr>
     <td>
       <b><?= h($e['title']) ?></b><br><?= h($e['author']) ?><br>
-      <small>dodano <?= h($e['created']) ?>, zmiana <?= h($e['updated']) ?></small><br>
+      <small>dodano <?= h($e['created']) ?>, zmiana <?= h($e['updated']) ?><?= $w !== '' ? ', oczekuje ' . h($w) : '' ?></small><br>
       <div class="row">
         <input class="link" readonly value="<?= h($link) ?>" onclick="this.select()">
         <button type="button" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);this.textContent='Skopiowano';">Kopiuj link</button>
