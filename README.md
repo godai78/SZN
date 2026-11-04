@@ -14,3 +14,7 @@
 
 ### Korzystanie z linku.
 Autorka/autor mogą na bieżąco podejrzeć stan zgłoszenia pod otrzymanym linkiem. Widzą czas od zgłoszenia oraz liczbę pozostałych tekstów czekających na sprawdzenie.
+
+### Wersja z uploaderem
+
+Na branchu https://github.com/godai78/SZN/tree/uploader-version znajduje się wersja z uploaderem, automatycznie udostępniająca linki.
