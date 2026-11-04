@@ -3,11 +3,14 @@
 // ===== https://github.com/godai78/SZN =====
 
 // ===== KONFIGURACJA =====
-const PASSWORD  = 'haslo';          // hasło do panelu redaktora
-const SITE_NAME = 'nazwa pisma';
+const PASSWORD  = 'haslo';          // hasło do panelu redaktora (zmień na produkcyjne!)
+const SITE_NAME = 'nazwa pisma/naboru';
 const BASE_URL  = '';                    // opcjonalnie np. 'https://zgloszenia.twojadomena.pl/index.php'; puste = automatycznie
 const STATUSES  = ['otrzymane', 'w czytaniu', 'czeka na decyzję', 'przyjęte', 'odrzucone', 'wycofane'];
-const DATA_FILE = __DIR__ . '/data.php'; // dane (plik jest zabezpieczony przed odczytem z WWW)
+const DATA_FILE = __DIR__ . '/data.php'; // dane (plik zabezpieczony przed odczytem z WWW)
+const UPLOAD_DIR = __DIR__ . '/uploads/'; // katalog na pliki użytkowników
+const ALLOWED_EXT = ['doc', 'docx', 'rtf']; 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // obniżony limit do 5 MB
 // ========================
 
 date_default_timezone_set('Europe/Warsaw');
@@ -28,7 +31,11 @@ function page($title, $body) {
         . '<title>' . h($title) . '</title><style>' . CSS . '</style></head><body>' . $body . '</body></html>';
 }
 
-// ---------- dane ----------
+if (!is_dir(UPLOAD_DIR)) {
+    mkdir(UPLOAD_DIR, 0755, true);
+    file_put_contents(UPLOAD_DIR . '.htaccess', "Deny from all\n");
+}
+
 function load_data() {
     if (!is_file(DATA_FILE)) return [];
     $raw = (string)file_get_contents(DATA_FILE);
@@ -49,7 +56,6 @@ function save_data($d) {
     fclose($fp);
 }
 
-// liczniki: otrzymane = wszystkie wpisy; w kolejce = otrzymane bez przyjętych, odrzuconych i wycofanych
 function counts($data) {
     $c = ['total' => count($data), 'accepted' => 0, 'rejected' => 0, 'withdrawn' => 0];
     foreach ($data as $e) {
@@ -61,7 +67,6 @@ function counts($data) {
     return $c;
 }
 
-// czas oczekiwania: dni od dodania do dziś; dla wpisów zamkniętych (przyjęte/odrzucone/wycofane) pusty tekst
 function waiting($e) {
     if (in_array($e['status'], ['przyjęte', 'odrzucone', 'wycofane'], true)) return '';
     $d = date_diff(date_create(substr($e['created'], 0, 10)), date_create('today'));
@@ -69,10 +74,67 @@ function waiting($e) {
     return $n . ' ' . ($n === 1 ? 'dzień' : 'dni');
 }
 
-// ---------- widok publiczny (autor) ----------
+// Walidacja struktury plików (magic bytes) zapobiegająca spoofingowi rozszerzeń
+function validate_file_magic_bytes($path, $ext) {
+    $handle = @fopen($path, 'rb');
+    if (!$handle) return false;
+    $bytes = fread($handle, 8);
+    fclose($handle);
+
+    if ($ext === 'docx') {
+        // ZIP nagłówek: PK (50 4B 03 04)
+        return strncmp($bytes, "\x50\x4B\x03\x04", 4) === 0;
+    } elseif ($ext === 'rtf') {
+        // RTF zaczyna się od {\rtf
+        return strncmp($bytes, '{\rtf', 5) === 0;
+    } elseif ($ext === 'doc') {
+        // OLE Compound File Binary Format: D0 CF 11 E0 A1 B1 1A E1
+        return strncmp($bytes, "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1", 8) === 0;
+    }
+    return false;
+}
+
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$self = strtok($_SERVER['REQUEST_URI'], '?');
+$base = BASE_URL !== '' ? BASE_URL : $scheme . '://' . $_SERVER['HTTP_HOST'] . $self;
+
+session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax', 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off']);
+session_start();
+header('X-Robots-Tag: noindex, nofollow');
+header('Cache-Control: no-store');
+
+// Inicjalizacja tokenu CSRF dla formularza publicznego
+if (empty($_SESSION['public_csrf'])) {
+    $_SESSION['public_csrf'] = bin2hex(random_bytes(16));
+}
+
+// Bezpieczne pobieranie pliku przez redaktora
+if (isset($_GET['download']) && !empty($_SESSION['ok'])) {
+    $id = (string)$_GET['download'];
+    $data = load_data();
+    foreach ($data as $e) {
+        if ($e['id'] === $id && !empty($e['file'])) {
+            $filePath = UPLOAD_DIR . $e['file'];
+            if (is_file($filePath)) {
+                $filename = $e['original_filename'] ?? 'plik';
+                header('Content-Description: File Transfer');
+                header('Content-Type: application/octet-stream');
+                header('Content-Disposition: attachment; filename="' . basename($filename) . '"');
+                header('Expires: 0');
+                header('Cache-Control: must-revalidate');
+                header('Pragma: public');
+                header('Content-Length: ' . filesize($filePath));
+                readfile($filePath);
+                exit;
+            }
+        }
+    }
+    http_response_code(404);
+    exit('Nie znaleziono pliku.');
+}
+
+// Widok publiczny (autor - podgląd statusu po tokenie)
 if (isset($_GET['t'])) {
-    header('X-Robots-Tag: noindex, nofollow');
-    header('Cache-Control: no-store');
     $t = (string)$_GET['t'];
     $found = null;
     $all = load_data();
@@ -94,59 +156,151 @@ if (isset($_GET['t'])) {
         . '<p class="muted">Ostatnia zmiana: ' . h($found['updated']) . '</p>'
         . ($w !== '' ? '<p class="muted">Oczekuje: <b>' . h($w) . '</b></p>' : '')
         . '<p class="muted">Zgłoszenia oczekujące na czytanie: <b>' . $c['queue'] . '</b></p>'
-		. '<p class="box">Legenda:<br>'
-		. '"otrzymane" to znaczy, że wszystko porządku i czeka na czytanie.<br>'
-		. '"w czytaniu" to ten nerwowy moment dla mnie i dla ciebie.<br>'
-		. '"czeka na decyzję" oznacza, że muszę jeszcze przeczytać resztę i wtedy zadecydować.<br>'
-		. '"przyjęte" to wiadomo, zaraz będzie mail<br>'
-		. '"odrzucone" tu też wiadomo, żadnego maila już nie będzie, zapraszam za rok.</p>'
-		. '<p class="muted">Zebrane dane nie są udostępniane ani przetwarzane, zostaną usunięte po zakończeniu naboru.</p>');
+        . '<p class="box">Legenda:<br>'
+        . '"otrzymane" to znaczy, że wszystko w porządku i czeka na czytanie.<br>'
+        . '"w czytaniu" to ten nerwowy moment dla mnie i dla ciebie.<br>'
+        . '"czeka na decyzję" oznacza, że muszę jeszcze przeczytać resztę i wtedy zadecydować.<br>'
+        . '"przyjęte" to wiadomo, zaraz będzie mail.<br>'
+        . '"odrzucone" tu też wiadomo, żadnego maila już nie będzie, zapraszam za rok.</p>'
+        . '<p class="muted">Zebrane dane nie są udostępniane ani przetwarzane, zostaną usunięte po zakończeniu naboru.</p>');
     exit;
 }
 
-// ---------- panel redaktora ----------
-session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax', 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off']);
-session_start();
-header('X-Robots-Tag: noindex, nofollow');
-header('Cache-Control: no-store');
+// Obsługa publicznego wysłania zgłoszenia z plikiem i ochroną CSRF
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'public_submit') {
+    if (!isset($_SESSION['public_csrf'], $_POST['public_csrf']) || !hash_equals($_SESSION['public_csrf'], (string)$_POST['public_csrf'])) {
+        http_response_code(400);
+        exit('Błąd bezpieczeństwa (CSRF). Odśwież stronę.');
+    }
 
-$self = strtok($_SERVER['REQUEST_URI'], '?');
+    $author = trim(mb_substr((string)($_POST['author'] ?? ''), 0, 200));
+    $title  = trim(mb_substr((string)($_POST['title'] ?? ''), 0, 300));
+    
+    $pub_error = '';
+    $saved_filename = '';
 
-function redirect_self() {
-    global $self;
-    header('Location: ' . $self);
-    exit;
+    if ($author === '' || $title === '') {
+        $pub_error = 'Wypełnij imię/pseudonim oraz tytuł.';
+    } elseif (!isset($_FILES['file']) || $_FILES['file']['error'] === UPLOAD_ERR_NO_FILE) {
+        $pub_error = 'Musisz wgrać plik ze swoim tekstem.';
+    } else {
+        $file = $_FILES['file'];
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            $pub_error = 'Błąd podczas wgrywania pliku.';
+        } elseif ($file['size'] > MAX_FILE_SIZE) {
+            $pub_error = 'Plik jest za duży (maksymalnie 5 MB).';
+        } else {
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, ALLOWED_EXT, true)) {
+                $pub_error = 'Niedozwolony format pliku. Dozwolone są wyłącznie pliki: DOC, DOCX, RTF.';
+            } elseif (!validate_file_magic_bytes($file['tmp_name'], $ext)) {
+                $pub_error = 'Plik jest uszkodzony lub jego zawartość nie odpowiada zadeklarowanemu formatowi.';
+            } else {
+                $saved_filename = bin2hex(random_bytes(8)) . '.' . $ext;
+                if (!move_uploaded_file($file['tmp_name'], UPLOAD_DIR . $saved_filename)) {
+                    $pub_error = 'Nie udało się zapisać pliku na serwerze.';
+                }
+            }
+        }
+    }
+
+    if (empty($pub_error)) {
+        $data = load_data();
+        $now = date('Y-m-d H:i');
+        $token = bin2hex(random_bytes(16));
+        $id = bin2hex(random_bytes(4));
+        
+        $data[] = [
+            'id' => $id,
+            'token' => $token,
+            'author' => $author, 
+            'title' => $title, 
+            'status' => 'otrzymane',
+            'file' => $saved_filename,
+            'original_filename' => $_FILES['file']['name'],
+            'created' => $now, 
+            'updated' => $now,
+        ];
+        save_data($data);
+        
+        // Reset tokenu po udanym wysłaniu zapobiega podwójnemu wysłaniu przez odświeżenie
+        unset($_SESSION['public_csrf']);
+        
+        $personal_link = $base . '?t=' . $token;
+        
+        page('Zgłoszenie przyjęte', 
+            '<h1>Dziękujemy za zgłoszenie!</h1>'
+            . '<p>Twoje opowiadanie <b>' . h($title) . '</b> zostało pomyślnie wgrane i zarejestrowane.</p>'
+            . '<div class="box"><p><b>Oto Twój osobisty link do śledzenia statusu zgłoszenia:</b></p>'
+            . '<div class="row"><input class="link" readonly value="' . h($personal_link) . '" onclick="this.select()">'
+            . '<button type="button" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);this.textContent=\'Skopiowano\';">Skopiuj link</button></div>'
+            . '<p><small>Zapisz ten link! Nie wysyłamy go automatycznie mailem – to jedyny sposób na sprawdzenie statusu tekstu.</small></p></div>'
+            . '<p><a href="' . h($self) . '">&larr; Wróć do strony głównej naboru</a></p>');
+        exit;
+    }
 }
 
-function csrf_ok() {
-    return isset($_SESSION['csrf'], $_POST['csrf']) && hash_equals($_SESSION['csrf'], (string)$_POST['csrf']);
-}
-
-// logowanie
+// Logowanie redaktora
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
     if (hash_equals(PASSWORD, (string)($_POST['password'] ?? ''))) {
         session_regenerate_id(true);
         $_SESSION['ok'] = true;
         $_SESSION['csrf'] = bin2hex(random_bytes(16));
-        redirect_self();
+        header('Location: ' . $self);
+        exit;
     }
     sleep(1);
     $login_error = true;
 }
 
 if (empty($_SESSION['ok'])) {
-    page('Logowanie',
-        '<h1>Panel redakcji</h1>'
-        . (!empty($login_error) ? '<p style="color:#b00">Błędne hasło.</p>' : '')
-        . '<form method="post"><input type="hidden" name="action" value="login">'
-        . '<div class="row"><label>Hasło<input type="password" name="password" autofocus required></label>'
-        . '<button>Zaloguj</button></div></form>');
+    ob_start(); ?>
+    <h1><?= h(SITE_NAME) ?></h1>
+    <p>Wypełnij poniższy formularz, aby zgłosić swój tekst do naboru. Po wysłaniu otrzymasz unikalny link do śledzenia statusu.</p>
+
+    <?php if (!empty($pub_error)): ?>
+        <div class="box" style="background:#ffe6e6;color:#900"><b>Błąd:</b> <?= h($pub_error) ?></div>
+    <?php endif; ?>
+
+    <form method="post" enctype="multipart/form-data" class="box">
+        <input type="hidden" name="action" value="public_submit">
+        <input type="hidden" name="public_csrf" value="<?= h($_SESSION['public_csrf']) ?>">
+        <div class="row" style="flex-direction:column;align-items:stretch">
+            <label>Imię / Nazwisko / Pseudonim<input name="author" required value="<?= h($_POST['author'] ?? '') ?>"></label>
+            <label>Tytuł utworu<input name="title" required value="<?= h($_POST['title'] ?? '') ?>"></label>
+            
+            <label>Plik z tekstem
+                <small class="muted" style="margin-bottom:0.2rem">Dozwolone formaty: <b>DOC, DOCX, RTF</b> (maksymalnie 5 MB)</small>
+                <input type="file" name="file" required accept=".doc,.docx,.rtf">
+            </label>
+            
+            <div><button style="margin-top:.5rem">Wyślij zgłoszenie</button></div>
+        </div>
+    </form>
+
+    <hr style="margin:3rem 0;border:0;border-top:1px solid #ddd">
+    
+    <details>
+        <summary style="cursor:pointer;color:#666">Panel redakcji (dla administratora)</summary>
+        <form method="post" style="margin-top:1rem">
+            <input type="hidden" name="action" value="login">
+            <?php if (!empty($login_error)): ?><p style="color:#b00">Błędne hasło.</p><?php endif; ?>
+            <div class="row"><label>Hasło redaktora<input type="password" name="password" required></label>
+            <button>Zaloguj</button></div>
+        </form>
+    </details>
+    <?php
+    page(SITE_NAME, ob_get_clean());
     exit;
 }
 
-// akcje (wymagają tokenu CSRF)
+// Akcje redaktora (wymagają tokenu CSRF)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!csrf_ok()) { http_response_code(400); exit('Błąd CSRF. Odśwież stronę.'); }
+    if (!isset($_SESSION['csrf'], $_POST['csrf']) || !hash_equals($_SESSION['csrf'], (string)$_POST['csrf'])) {
+        http_response_code(400); 
+        exit('Błąd CSRF. Odśwież stronę.');
+    }
+    
     $action = $_POST['action'] ?? '';
     $data = load_data();
     $now = date('Y-m-d H:i');
@@ -154,27 +308,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'logout') {
         $_SESSION = [];
         session_destroy();
-        redirect_self();
-    }
-    if ($action === 'add') {
-        $author = trim(mb_substr((string)($_POST['author'] ?? ''), 0, 200));
-        $title  = trim(mb_substr((string)($_POST['title'] ?? ''), 0, 300));
-        $status = (string)($_POST['status'] ?? '');
-        if ($author !== '' && $title !== '' && in_array($status, STATUSES, true)) {
-            $data[] = [
-                'id' => bin2hex(random_bytes(4)),
-                'token' => bin2hex(random_bytes(16)), // 128 bitów losowości
-                'author' => $author, 'title' => $title, 'status' => $status,
-                'created' => $now, 'updated' => $now,
-            ];
-            save_data($data);
-        }
+        header('Location: ' . $self);
+        exit;
     }
     if ($action === 'status' || $action === 'delete') {
         $id = (string)($_POST['id'] ?? '');
         foreach ($data as $i => $e) {
             if ($e['id'] !== $id) continue;
             if ($action === 'delete') {
+                if (!empty($e['file']) && is_file(UPLOAD_DIR . $e['file'])) {
+                    @unlink(UPLOAD_DIR . $e['file']);
+                }
                 unset($data[$i]);
             } elseif (in_array($_POST['status'] ?? '', STATUSES, true) && $_POST['status'] !== $e['status']) {
                 $data[$i]['status'] = $_POST['status'];
@@ -184,12 +328,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
         }
     }
-    redirect_self();
+    header('Location: ' . $self);
+    exit;
 }
 
-// widok listy
-$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$base = BASE_URL !== '' ? BASE_URL : $scheme . '://' . $_SERVER['HTTP_HOST'] . $self;
 $csrf = $_SESSION['csrf'];
 $rows = array_reverse(load_data());
 $c = counts($rows);
@@ -201,28 +343,19 @@ ob_start(); ?>
     <input type="hidden" name="action" value="logout"><button>Wyloguj</button></form>
 </div>
 
-<form method="post" class="box">
-  <input type="hidden" name="csrf" value="<?= h($csrf) ?>"><input type="hidden" name="action" value="add">
-  <div class="row">
-    <label>Autor<input name="author" required></label>
-    <label>Tytuł<input name="title" required></label>
-    <label>Stan<select name="status">
-      <?php foreach (STATUSES as $s): ?><option><?= h($s) ?></option><?php endforeach; ?>
-    </select></label>
-    <button>Dodaj</button>
-  </div>
-</form>
-
 <p>Otrzymane: <b><?= $c['total'] ?></b> · przyjęte: <b><?= $c['accepted'] ?></b> · odrzucone: <b><?= $c['rejected'] ?></b></p>
 
 <table>
-  <tr><th>Autor / tytuł</th><th>Stan</th></tr>
+  <tr><th>Autor / tytuł / plik</th><th>Stan</th></tr>
   <?php foreach ($rows as $e): $link = $base . '?t=' . $e['token']; $w = waiting($e); ?>
   <tr>
     <td>
       <b><?= h($e['title']) ?></b><br><?= h($e['author']) ?><br>
+      <?php if (!empty($e['file'])): ?>
+        <small>Plik: <a href="<?= h($self) ?>?download=<?= h($e['id']) ?>"><?= h($e['original_filename'] ?? 'pobierz') ?></a></small><br>
+      <?php endif; ?>
       <small>dodano <?= h($e['created']) ?>, zmiana <?= h($e['updated']) ?><?= $w !== '' ? ', oczekuje ' . h($w) : '' ?></small><br>
-      <div class="row">
+      <div class="row" style="margin-top:.3rem">
         <input class="link" readonly value="<?= h($link) ?>" onclick="this.select()">
         <button type="button" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);this.textContent='Skopiowano';">Kopiuj link</button>
       </div>
@@ -236,7 +369,7 @@ ob_start(); ?>
         </select>
         <button>Zapisz</button>
       </form>
-      <form method="post" onsubmit="return confirm('Usunąć wpis? Link autora przestanie działać.')" style="margin-top:.4rem">
+      <form method="post" onsubmit="return confirm('Usunąć wpis i plik? Link autora przestanie działać.')" style="margin-top:.4rem">
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
         <input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= h($e['id']) ?>">
         <button><small>Usuń</small></button>
