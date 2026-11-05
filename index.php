@@ -3,14 +3,14 @@
 // ===== https://github.com/godai78/SZN =====
 
 // ===== KONFIGURACJA =====
-const PASSWORD  = 'haslo';          // hasło do panelu redaktora (zmień na produkcyjne!)
+const PASSWORD  = 'haslo'; // hasło do panelu redaktora (zmień na produkcyjne!)
 const SITE_NAME = 'nazwa pisma/naboru';
-const BASE_URL  = '';                    // opcjonalnie np. 'https://zgloszenia.twojadomena.pl/index.php'; puste = automatycznie
-const STATUSES  = ['otrzymane', 'w czytaniu', 'czeka na decyzję', 'przyjęte', 'odrzucone', 'wycofane'];
+const BASE_URL  = ''; // opcjonalnie np. 'https://zgloszenia.twojadomena.pl/index.php'; puste = automatycznie
+const STATUSES  = ['otrzymane', 'w czytaniu', 'czeka na decyzję', 'przyjęte', 'odrzucone', 'wycofane']; // można dodawać, ujmować, zmieniać; należy uzupełnić opis poniżej
 const DATA_FILE = __DIR__ . '/data.php'; // dane (plik zabezpieczony przed odczytem z WWW)
 const UPLOAD_DIR = __DIR__ . '/uploads/'; // katalog na pliki użytkowników
 const ALLOWED_EXT = ['doc', 'docx', 'rtf']; 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // obniżony limit do 5 MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // limit można kontrolować
 // ========================
 
 date_default_timezone_set('Europe/Warsaw');
