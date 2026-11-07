@@ -5,21 +5,22 @@
 
 // ===== KONFIGURACJA =====
 // ===== To musisz zmienić =====
-const PASSWORD_HASH = 'uzupełnij'; // Wklej tu hash z password_hash() albo ustaw zmienną środowiskową EDITOR_PASSWORD_HASH. (Patrz README).
+const PASSWORD_HASH = 'uzupełnij'; // Wklej tu hash hasła z password_hash() albo ustaw zmienną środowiskową EDITOR_PASSWORD_HASH. (Patrz README).
 const SITE_NAME = 'uzupełnij'; // Podaj nazwę pisma/antologii/naboru.
 const BASE_URL = 'uzupełnij'; // WYMAGANE: pełny adres HTTPS, np. https://zgloszenia.twojadomena.pl/index.php
-const STATUSES = ['otrzymane', 'w czytaniu', 'czeka na decyzję', 'przyjęte', 'odrzucone', 'wycofane']; // statusy zgłoszeń, można dodać, odejmować, zmieniać. Przy zmianach popraw legendę dla użytkownika.
 
 // ===== Tego nie musisz zmieniać, ale możesz =====
+const STATUSES = ['otrzymane', 'w czytaniu', 'czeka na decyzję', 'przyjęte', 'odrzucone', 'wycofane']; // statusy zgłoszeń, można dodać, odejmować, zmieniać. Przy zmianach popraw legendę dla użytkownika.
+
 const DATA_FILE = __DIR__ . '/data.php'; // Plik z danymi.
 const UPLOAD_DIR = __DIR__ . '/uploads/'; // Katalog do wgrywania plików.
-const RATE_LIMIT_DIR = __DIR__ . '/rate-limits/';
-const DATA_LOCK_FILE = __DIR__ . '/data.lock';
+const RATE_LIMIT_DIR = __DIR__ . '/rate-limits/'; // Tego nie muszisz ruszać.
+const DATA_LOCK_FILE = __DIR__ . '/data.lock'; // Tego nie muszisz ruszać.
 
 const ALLOWED_EXT = ['doc', 'docx', 'rtf'];
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // Dopuszczalna maksymalna wielkość plików, domyślnie 5MB.
-const MAX_SUBMISSIONS_PER_IP = 10;
-const SUBMISSION_RATE_WINDOW = 3600; // Minimalny czas między zgłoseniami z jednego IP, domylnie 1 godzina.
+const MAX_FILE_SIZE = 1 * 1024 * 1024; // Dopuszczalna maksymalna wielkość plików, domyślnie 1MB.
+const MAX_SUBMISSIONS_PER_IP = 10; // Maksymalna ilość zgłoszeń z jednego IP, domyślnie 10.
+const SUBMISSION_RATE_WINDOW = 3600; // Minimalny czas między zgłoszeniami z jednego IP, domylnie 1 godzina.
 const MAX_LOGIN_ATTEMPTS_PER_IP = 5; // Maksymalna ilość niudanych prób logowania do admin.
 const LOGIN_RATE_WINDOW = 900; // Czas blokady po nieudanych próbach, domyślnie 15 minut.
 const EDITOR_IDLE_TIMEOUT = 1800; // Czas wylogowania bezczynnego admina, domyślnie 30 minut.
