@@ -368,7 +368,10 @@ if (isset($_GET['t'])) {
         . '"czeka na decyzję" oznacza, że muszę jeszcze przeczytać resztę i wtedy zadecydować.<br>'
         . '"przyjęte" to wiadomo, zaraz będzie mail.<br>'
         . '"odrzucone" tu też wiadomo, żadnego maila już nie będzie, zapraszam za rok.</p>'
-        . '<p class="muted">Dane zgłoszenia są wykorzystywane do obsługi naboru i nie są publicznie udostępniane. Informacje o okresie przechowywania danych znajdują się w zasadach naboru.</p>');
+		. '<hr style="margin:3rem 0;border:0;border-top:1px solid #ddd">'
+        . '<p class="muted">Dane zgłoszenia są wykorzystywane do obsługi naboru i nie są publicznie udostępniane. Informacje o okresie przechowywania danych znajdują się w zasadach naboru.</p>'
+		. '<p><a href="https://github.com/godai78/SZN" target="_blank">System Zarządzania Naborem</a> 2.1 © <a href="https://gniazdoswiatow.net" target="_blank">Bartek Biedrzycki</a> 2026</p>
+    <hr style="margin:3rem 0;border:0;border-top:1px solid #ddd">');
     exit;
 }
 
@@ -495,6 +498,8 @@ if (empty($_SESSION['ok'])) {
     </form>
 
     <hr style="margin:3rem 0;border:0;border-top:1px solid #ddd">
+	<p><a href="https://github.com/godai78/SZN" target="_blank">System Zarządzania Naborem</a> 2.1 © <a href="https://gniazdoswiatow.net" target="_blank">Bartek Biedrzycki</a> 2026</p>
+    <hr style="margin:3rem 0;border:0;border-top:1px solid #ddd">	
     <details>
         <summary style="cursor:pointer;color:#666">Panel redakcji (dla administratora)</summary>
         <form method="post" style="margin-top:1rem">
