@@ -14,14 +14,14 @@ const STATUSES = ['otrzymane', 'w czytaniu', 'czeka na decyzję', 'przyjęte', '
 
 const DATA_FILE = __DIR__ . '/data.php'; // Plik z danymi.
 const UPLOAD_DIR = __DIR__ . '/uploads/'; // Katalog do wgrywania plików.
-const RATE_LIMIT_DIR = __DIR__ . '/rate-limits/'; // Tego nie muszisz ruszać.
-const DATA_LOCK_FILE = __DIR__ . '/data.lock'; // Tego nie muszisz ruszać.
+const RATE_LIMIT_DIR = __DIR__ . '/rate-limits/'; // Tego nie musisz ruszać.
+const DATA_LOCK_FILE = __DIR__ . '/data.lock'; // Tego nie musisz ruszać.
 
 const ALLOWED_EXT = ['doc', 'docx', 'rtf'];
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // Dopuszczalna maksymalna wielkość plików, domyślnie 1MB.
 const MAX_SUBMISSIONS_PER_IP = 10; // Maksymalna ilość zgłoszeń z jednego IP, domyślnie 10.
-const SUBMISSION_RATE_WINDOW = 3600; // Minimalny czas między zgłoszeniami z jednego IP, domylnie 1 godzina.
-const MAX_LOGIN_ATTEMPTS_PER_IP = 5; // Maksymalna ilość niudanych prób logowania do admin.
+const SUBMISSION_RATE_WINDOW = 3600; // Okno limitu, domyślnie 1 godzina.
+const MAX_LOGIN_ATTEMPTS_PER_IP = 5; // Maksymalna ilość nieudanych prób logowania do admin.
 const LOGIN_RATE_WINDOW = 900; // Czas blokady po nieudanych próbach, domyślnie 15 minut.
 const EDITOR_IDLE_TIMEOUT = 1800; // Czas wylogowania bezczynnego admina, domyślnie 30 minut.
 // ===== KONIEC KONFIGURACJI =====
@@ -398,7 +398,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'publi
         if ($file['error'] !== UPLOAD_ERR_OK) {
             $pub_error = 'Błąd podczas wgrywania pliku. Sprawdź limit wielkości pliku na serwerze.';
         } elseif (!isset($file['size']) || (int)$file['size'] <= 0 || (int)$file['size'] > MAX_FILE_SIZE || !is_uploaded_file($file['tmp_name'])) {
-            $pub_error = 'Plik jest pusty, za duży lub nie został prawidłowo przesłany (maksymalnie 5 MB).';
+            $pub_error = 'Plik jest pusty, za duży lub nie został prawidłowo przesłany (maksymalnie 1 MB).';
         } else {
             $ext = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
             if (!in_array($ext, ALLOWED_EXT, true)) {
@@ -490,7 +490,7 @@ if (empty($_SESSION['ok'])) {
             <label>Imię / Nazwisko / Pseudonim<input name="author" required maxlength="200" value="<?= h($_POST['author'] ?? '') ?>"></label>
             <label>Tytuł utworu<input name="title" required maxlength="300" value="<?= h($_POST['title'] ?? '') ?>"></label>
             <label>Plik z tekstem
-                <small class="muted" style="margin-bottom:0.2rem">Dozwolone formaty: <b>DOC, DOCX, RTF</b> (maksymalnie 5 MB)</small>
+                <small class="muted" style="margin-bottom:0.2rem">Dozwolone formaty: <b>DOC, DOCX, RTF</b> (maksymalnie 1 MB)</small>
                 <input type="file" name="file" required accept=".doc,.docx,.rtf">
             </label>
             <div><button style="margin-top:.5rem">Wyślij zgłoszenie</button></div>
