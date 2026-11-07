@@ -8,9 +8,9 @@
 const PASSWORD_HASH = 'uzupełnij'; // Wklej tu hash z password_hash() albo ustaw zmienną środowiskową EDITOR_PASSWORD_HASH. (Patrz README).
 const SITE_NAME = 'uzupełnij'; // Podaj nazwę pisma/antologii/naboru.
 const BASE_URL = 'uzupełnij'; // WYMAGANE: pełny adres HTTPS, np. https://zgloszenia.twojadomena.pl/index.php
-const STATUSES = ['otrzymane', 'w czytaniu', 'czeka na decyzję', 'przyjęte', 'odrzucone', 'wycofane'];
+const STATUSES = ['otrzymane', 'w czytaniu', 'czeka na decyzję', 'przyjęte', 'odrzucone', 'wycofane']; // statusy zgłoszeń, można dodać, odejmować, zmieniać. Przy zmianach popraw legendę dla użytkownika.
 
-// ===== TEgo nie musisz zmieniać, ale możesz =====
+// ===== Tego nie musisz zmieniać, ale możesz =====
 const DATA_FILE = __DIR__ . '/data.php'; // Plik z danymi.
 const UPLOAD_DIR = __DIR__ . '/uploads/'; // Katalog do wgrywania plików.
 const RATE_LIMIT_DIR = __DIR__ . '/rate-limits/';
