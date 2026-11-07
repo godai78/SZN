@@ -62,15 +62,15 @@ function ensure_directory($path) {
     }
 }
 
-function protect_upload_dir() {
-    if (!is_dir(UPLOAD_DIR)) return;
-    $htaccess = UPLOAD_DIR . '.htaccess';
+function protect_directory($dir) {
+    if (!is_dir($dir)) return;
+    $htaccess = $dir . '.htaccess';
     if (!is_file($htaccess)) {
         $rules = "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n"
             . "<IfModule !mod_authz_core.c>\nOrder allow,deny\nDeny from all\n</IfModule>\n";
         @file_put_contents($htaccess, $rules);
     }
-    $index = UPLOAD_DIR . 'index.php';
+    $index = $dir . 'index.php';
     if (!is_file($index)) {
         @file_put_contents($index, "<?php http_response_code(404); exit;\n");
     }
@@ -78,7 +78,9 @@ function protect_upload_dir() {
 
 ensure_directory(UPLOAD_DIR);
 ensure_directory(RATE_LIMIT_DIR);
-protect_upload_dir();
+protect_directory(UPLOAD_DIR);
+protect_directory(RATE_LIMIT_DIR);
+cleanup_rate_limits();
 
 function acquire_data_lock($mode) {
     $fp = @fopen(DATA_LOCK_FILE, 'c+');
@@ -207,6 +209,25 @@ function rate_limit_allow($scope, $limit, $windowSeconds) {
 function clear_rate_limit($scope) {
     $path = rate_limit_file($scope);
     if (is_file($path)) @unlink($path);
+}
+
+// Czyści stare pliki limitów (starsze niż najdłuższe okno). Uruchamia się losowo, średnio co 50. żądanie.
+function cleanup_rate_limits() {
+    if (random_int(1, 50) !== 1) return;
+    $maxAge = max(SUBMISSION_RATE_WINDOW, LOGIN_RATE_WINDOW);
+    $files = glob(RATE_LIMIT_DIR . '*.json');
+    if (!is_array($files)) return;
+    foreach ($files as $path) {
+        $mtime = @filemtime($path);
+        if ($mtime === false || $mtime > time() - $maxAge) continue;
+        $fp = @fopen($path, 'c+');
+        if (!$fp) continue;
+        if (flock($fp, LOCK_EX | LOCK_NB)) {
+            @unlink($path);
+            flock($fp, LOCK_UN);
+        }
+        fclose($fp);
+    }
 }
 
 function counts($data) {
@@ -386,11 +407,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'publi
     $saved_filename = '';
     $author = trim(mb_substr((string)($_POST['author'] ?? ''), 0, 200, 'UTF-8'));
     $title = trim(mb_substr((string)($_POST['title'] ?? ''), 0, 300, 'UTF-8'));
+    $email = trim((string)($_POST['email'] ?? ''));
 
     if (!rate_limit_allow('public-submit', MAX_SUBMISSIONS_PER_IP, SUBMISSION_RATE_WINDOW)) {
         $pub_error = 'Z tego adresu wysłano już wiele zgłoszeń. Spróbuj ponownie później.';
     } elseif ($author === '' || $title === '') {
         $pub_error = 'Wypełnij imię/pseudonim oraz tytuł.';
+    } elseif ($email === '' || strlen($email) > 254 || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+        $pub_error = 'Podaj poprawny adres e-mail.';
     } elseif (!isset($_FILES['file']) || $_FILES['file']['error'] === UPLOAD_ERR_NO_FILE) {
         $pub_error = 'Musisz wgrać plik ze swoim tekstem.';
     } else {
@@ -427,6 +451,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'publi
             'token' => $token,
             'author' => $author,
             'title' => $title,
+            'email' => $email,
             'status' => 'otrzymane',
             'file' => $saved_filename,
             'original_filename' => $originalFilename,
@@ -489,6 +514,10 @@ if (empty($_SESSION['ok'])) {
         <div class="row" style="flex-direction:column;align-items:stretch">
             <label>Imię / Nazwisko / Pseudonim<input name="author" required maxlength="200" value="<?= h($_POST['author'] ?? '') ?>"></label>
             <label>Tytuł utworu<input name="title" required maxlength="300" value="<?= h($_POST['title'] ?? '') ?>"></label>
+            <label>Adres e-mail
+                <small class="muted" style="margin-bottom:0.2rem">Do kontaktu w sprawie zgłoszenia. Nie jest widoczny publicznie.</small>
+                <input type="email" name="email" required maxlength="254" autocomplete="email" value="<?= h($_POST['email'] ?? '') ?>">
+            </label>
             <label>Plik z tekstem
                 <small class="muted" style="margin-bottom:0.2rem">Dozwolone formaty: <b>DOC, DOCX, RTF</b> (maksymalnie 1 MB)</small>
                 <input type="file" name="file" required accept=".doc,.docx,.rtf">
@@ -594,6 +623,9 @@ ob_start(); ?>
   <tr>
     <td>
       <b><?= h($entry['title']) ?></b><br><?= h($entry['author']) ?><br>
+      <?php if (!empty($entry['email'])): ?>
+        <small>E-mail: <a href="mailto:<?= h($entry['email']) ?>"><?= h($entry['email']) ?></a></small><br>
+      <?php endif; ?>
       <?php if (!empty($entry['file'])): ?>
         <small>Plik: <a href="<?= h($self) ?>?download=<?= h($entry['id']) ?>"><?= h($entry['original_filename'] ?? 'pobierz') ?></a></small><br>
       <?php endif; ?>
