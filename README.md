@@ -31,7 +31,7 @@ Prosty system do przyjmowania i obsługi zgłoszeń literackich. Umożliwia auto
 ## Instalacja
 
 1. Skopiuj plik `index.php` na serwer.
-2. Przygotuj hash hasła redakcyjnego za pomocą narzędzia opartego na funkcji PHP `password_hash()`. Do wygenerowania hasha możeż użyć np. https://codeshack.io/php-password-hash-generator/
+2. Przygotuj hash hasła redakcyjnego za pomocą narzędzia opartego na funkcji PHP `password_hash()`. Do wygenerowania hasha możesz użyć np. https://codeshack.io/php-password-hash-generator/
 3. Otwórz plik i uzupełnij sekcję konfiguracji na początku:
 
    - `PASSWORD_HASH` – hash hasła redakcyjnego. Do konfiguracji wklej wygenerowany ciąg znaków, a nie samo hasło! 
