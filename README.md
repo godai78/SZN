@@ -1,4 +1,4 @@
-# SZN – System Zarządzania Naborem
+# SZN – System Zarządzania Naborem 2
 
 Prosty system do przyjmowania i obsługi zgłoszeń literackich. Umożliwia autorom przesyłanie opowiadań oraz sprawdzanie statusu zgłoszenia, a redakcji – przeglądanie tekstów i zarządzanie naborem.
 
