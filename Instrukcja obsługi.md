@@ -1,4 +1,4 @@
-# Instrukcja obsługi systemu SZN (System Zarządzania Naborem)
+# Instrukcja obsługi systemu SZN 2 (System Zarządzania Naborem)
 
 ## Autor/ka (osoba zgłaszająca tekst)
 
