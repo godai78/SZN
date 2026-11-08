@@ -45,3 +45,5 @@ Prosty system do przyjmowania i obsługi zgłoszeń literackich. Umożliwia auto
 
 Oprogramowanie dostarczane jest w trybie "as is", a autor nie ponosi odpowiedzialności za utracone dane.
 
+Dostępna jest także starsza wersja oferująca tylko panel zarządzania zgłoszeniami i linki, nie obejmująca wgrywania plików: https://github.com/godai78/SZN/tree/just-links
+
