@@ -86,6 +86,16 @@ if (isset($_GET['t'])) {
     }
     $c = counts($all);
     $w = waiting($found);
+    $is_rejected = $found['status'] === 'odrzucone';
+    $queue_line = $is_rejected ? '' : '<p class="muted">Zgłoszenia oczekujące na czytanie: <b>' . $c['queue'] . '</b></p>';
+    $info_box = $is_rejected
+        ? '<p class="box">Bardzo dziękuję za udział w tegorocznym naborze. Niestety, tym razem się nie udało. Zapraszam ponownie w kolejnym.</p>'
+        : '<p class="box">Legenda:<br>'
+            . '"otrzymane" to znaczy, że wszystko porządku i czeka na czytanie.<br>'
+            . '"w czytaniu" to ten nerwowy moment dla mnie i dla ciebie.<br>'
+            . '"czeka na decyzję" oznacza, że muszę jeszcze przeczytać resztę i wtedy zadecydować.<br>'
+            . '"przyjęte" to wiadomo, zaraz będzie mail<br>'
+            . '"odrzucone" tu też wiadomo, żadnego maila już nie będzie, zapraszam za rok.</p>';
     page($found['title'],
         '<p class="muted">' . h(SITE_NAME) . '</p>'
         . '<h1>' . h($found['title']) . '</h1>'
@@ -93,14 +103,9 @@ if (isset($_GET['t'])) {
         . '<div class="box"><div class="muted">Stan zgłoszenia</div><div class="big">' . h($found['status']) . '</div></div>'
         . '<p class="muted">Ostatnia zmiana: ' . h($found['updated']) . '</p>'
         . ($w !== '' ? '<p class="muted">Oczekuje: <b>' . h($w) . '</b></p>' : '')
-        . '<p class="muted">Zgłoszenia oczekujące na czytanie: <b>' . $c['queue'] . '</b></p>'
-		. '<p class="box">Legenda:<br>'
-		. '"otrzymane" to znaczy, że wszystko porządku i czeka na czytanie.<br>'
-		. '"w czytaniu" to ten nerwowy moment dla mnie i dla ciebie.<br>'
-		. '"czeka na decyzję" oznacza, że muszę jeszcze przeczytać resztę i wtedy zadecydować.<br>'
-		. '"przyjęte" to wiadomo, zaraz będzie mail<br>'
-		. '"odrzucone" tu też wiadomo, żadnego maila już nie będzie, zapraszam za rok.</p>'
-		. '<p class="muted">Zebrane dane nie są udostępniane ani przetwarzane, zostaną usunięte po zakończeniu naboru.</p>');
+        . $queue_line
+        . $info_box
+        . '<p class="muted">Zebrane dane nie są udostępniane ani przetwarzane, zostaną usunięte po zakończeniu naboru.</p>');
     exit;
 }
 
