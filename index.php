@@ -152,7 +152,7 @@ function save_data_unlocked($data) {
         error_log('[SZN] Nie udało się atomowo podmienić pliku danych.');
         return false;
     }
-    @chmod(DATA_FILE, 0600);
+    @chmod($DATA_FILE, 0600);
     return true;
 }
 
@@ -375,6 +375,14 @@ if (isset($_GET['t'])) {
     }
     $c = counts($all);
     $w = waiting($found);
+    $info_box = $found['status'] === 'odrzucone'
+        ? '<p class="box">Bardzo dziękuję za udział w tegorocznym naborze. Niestety, tym razem się nie udało. Zapraszam ponownie w kolejnym.</p>'
+        : '<p class="box">Legenda:<br>'
+            . '"otrzymane" to znaczy, że wszystko w porządku i czeka na czytanie.<br>'
+            . '"w czytaniu" to ten nerwowy moment dla mnie i dla ciebie.<br>'
+            . '"czeka na decyzję" oznacza, że muszę jeszcze przeczytać resztę i wtedy zadecydować.<br>'
+            . '"przyjęte" to wiadomo, zaraz będzie mail.<br>'
+            . '"odrzucone" tu też wiadomo, żadnego maila już nie będzie, zapraszam za rok.</p>';
     page($found['title'],
         '<p class="muted">' . h(SITE_NAME) . '</p>'
         . '<h1>' . h($found['title']) . '</h1>'
@@ -383,12 +391,7 @@ if (isset($_GET['t'])) {
         . '<p class="muted">Ostatnia zmiana: ' . h($found['updated']) . '</p>'
         . ($w !== '' ? '<p class="muted">Oczekuje: <b>' . h($w) . '</b></p>' : '')
         . '<p class="muted">Zgłoszenia oczekujące na czytanie: <b>' . $c['queue'] . '</b></p>'
-        . '<p class="box">Legenda:<br>'
-        . '"otrzymane" to znaczy, że wszystko w porządku i czeka na czytanie.<br>'
-        . '"w czytaniu" to ten nerwowy moment dla mnie i dla ciebie.<br>'
-        . '"czeka na decyzję" oznacza, że muszę jeszcze przeczytać resztę i wtedy zadecydować.<br>'
-        . '"przyjęte" to wiadomo, zaraz będzie mail.<br>'
-        . '"odrzucone" tu też wiadomo, żadnego maila już nie będzie, zapraszam za rok.</p>'
+        . $info_box
 		. '<hr style="margin:3rem 0;border:0;border-top:1px solid #ddd">'
         . '<p class="muted">Dane zgłoszenia są wykorzystywane do obsługi naboru i nie są publicznie udostępniane. Informacje o okresie przechowywania danych znajdują się w zasadach naboru.</p>'
 		. '<p><a href="https://github.com/godai78/SZN" target="_blank">System Zarządzania Naborem</a> 2.1 © <a href="https://gniazdoswiatow.net" target="_blank">Bartek Biedrzycki</a> 2026</p>
