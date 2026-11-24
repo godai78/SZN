@@ -375,7 +375,9 @@ if (isset($_GET['t'])) {
     }
     $c = counts($all);
     $w = waiting($found);
-    $info_box = $found['status'] === 'odrzucone'
+    $is_rejected = $found['status'] === 'odrzucone';
+    $queue_line = $is_rejected ? '' : '<p class="muted">Zgłoszenia oczekujące na czytanie: <b>' . $c['queue'] . '</b></p>';
+    $info_box = $is_rejected
         ? '<p class="box">Bardzo dziękuję za udział w tegorocznym naborze. Niestety, tym razem się nie udało. Zapraszam ponownie w kolejnym.</p>'
         : '<p class="box">Legenda:<br>'
             . '"otrzymane" to znaczy, że wszystko w porządku i czeka na czytanie.<br>'
@@ -390,7 +392,7 @@ if (isset($_GET['t'])) {
         . '<div class="box"><div class="muted">Stan zgłoszenia</div><div class="big">' . h($found['status']) . '</div></div>'
         . '<p class="muted">Ostatnia zmiana: ' . h($found['updated']) . '</p>'
         . ($w !== '' ? '<p class="muted">Oczekuje: <b>' . h($w) . '</b></p>' : '')
-        . '<p class="muted">Zgłoszenia oczekujące na czytanie: <b>' . $c['queue'] . '</b></p>'
+        . $queue_line
         . $info_box
 		. '<hr style="margin:3rem 0;border:0;border-top:1px solid #ddd">'
         . '<p class="muted">Dane zgłoszenia są wykorzystywane do obsługi naboru i nie są publicznie udostępniane. Informacje o okresie przechowywania danych znajdują się w zasadach naboru.</p>'
