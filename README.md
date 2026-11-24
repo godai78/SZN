@@ -5,10 +5,10 @@ Prosty system do przyjmowania i obsługi zgłoszeń literackich. Umożliwia auto
 ## Główne funkcje
 
 - Formularz zgłoszeniowy dla autorów.
-- Przyjmowanie plików DOC, DOCX i RTF o wielkości do 5 MB.
+- Przyjmowanie plików DOC, DOCX i RTF o możliwej do ustawienia wielkości.
 - Automatyczne nadawanie zgłoszeniom indywidualnych linków do śledzenia statusu.
 - Panel redakcyjny zabezpieczony hasłem.
-- Zmiana statusów zgłoszeń:
+- Zmiana statusów zgłoszeń (możliwa edycja):
   - otrzymane,
   - w czytaniu,
   - czeka na decyzję,
