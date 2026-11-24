@@ -22,3 +22,6 @@ Wersja z samymi linkami
   * Zaimplementowano bezpieczne blokowanie plików przy zapisie (flock) oraz atomową podmianę danych przez pliki tymczasowe, co zapobiega uszkodzeniom bazy JSON przy jednoczesnych zgłoszeniach.
   * Wzmocniono rygorystyczną walidację nagłówków binarnych (magic bytes) oraz struktury wewnętrznej dla wgrywanych plików (DOC, DOCX, RTF).
   * Poprawiono kodowanie oraz nagłówki pobierania plików (Content-Disposition), zapewniając poprawne nazwy oryginalnych plików bez ryzyka błędów i podatności.
+ 
+## 2.1.1 (2026-11-24)
+* Poprawiona obsługa odrzuconych zgłoszeń.
